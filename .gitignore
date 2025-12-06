@@ -9,7 +9,7 @@ venv/
 .ipynb_checkpoints
 
 # Data (Never push large data to git)
-data/
-models/
+# data/
+# models/
 *.pgm
 *.png
