@@ -1,9 +1,5 @@
 # Breast Cancer Detection in Mammograms using Deep Learning
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15%2B-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
-
 ## Project Overview
 This project focuses on the automated detection and classification of breast tumors in mammographic scans using Convolutional Neural Networks (CNNs). Utilizing the MIAS (Mammographic Image Analysis Society) dataset, the system aims to assist radiologists by providing a "second opinion" on whether a detected lesion is Benign or Malignant.
 
