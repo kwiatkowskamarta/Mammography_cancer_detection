@@ -1,0 +1,15 @@
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints
+
+# Data (Never push large data to git)
+data/
+models/
+*.pgm
+*.png
