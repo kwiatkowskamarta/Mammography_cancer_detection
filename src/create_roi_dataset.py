@@ -12,7 +12,7 @@ INFO_FILE = 'info.txt'
 ROI_SIZE = (224, 224) 
 
 def parse_info_file(file_path):
-    # Same parser as before
+    #same parser as before
     data = []
     with open(file_path, 'r') as f:
         lines = f.readlines()
@@ -44,17 +44,13 @@ def extract_and_save_rois(df):
         img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         h, w = img.shape
         
-        # Coordinates from info.txt
-        # NOTE: MIAS coordinates are essentially (x, y) starting from bottom-left or top-left depending on interpretation.
-        # Standard CV2 is top-left. MIAS documentation says: 
-        # "The x-axis increases from left to right, the y-axis increases from bottom to top."
-        # So we must flip the Y coordinate: y_cv2 = height - y_mias
+        # coordinates from info.txt
+        # MIAS documentation: "The x-axis increases from left to right, the y-axis increases from bottom to top" - flipping the Y coordinate: y_cv2 = height - y_mias
         center_x = row['x']
         center_y = h - row['y'] 
         radius = row['radius']
         
-        # We want to crop a square box around the circle
-        # Let's take a margin to show some context (1.2x radius)
+        # croping a square box around the circle (1.2x radius)
         box_size = int(radius * 1.2)
         
         y1 = max(0, center_y - box_size)
@@ -64,16 +60,15 @@ def extract_and_save_rois(df):
         
         roi = img[y1:y2, x1:x2]
         
-        # Resize to 224x224 for the model
+        #resize to 224x224 for the model
         if roi.size == 0: continue
         roi_resized = cv2.resize(roi, ROI_SIZE)
         
-        # Enhance Contrast (CLAHE) - very important for textures
+        # enhance contrast (CLAHE) (important for textures)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         roi_enhanced = clahe.apply(roi_resized)
         
-        # --- AUGMENTATION (Since we have very few ROIs) ---
-        # We save Original, Horizontal Flip, Vertical Flip, and Rotations
+        # augmemtation
         transforms = {
             'orig': None,
             'hflip': 1,
@@ -89,7 +84,7 @@ def extract_and_save_rois(df):
             else:
                 final_img = roi_enhanced
             
-            # Save
+            # save
             filename = f"{img_id}_{suffix}.png"
             cv2.imwrite(os.path.join(ROI_PROCESSED_PATH, filename), final_img)
             
@@ -97,9 +92,9 @@ def extract_and_save_rois(df):
             meta_row['filename'] = filename
             new_metadata.append(meta_row)
 
-    # Save CSV
+    # save CSV
     final_df = pd.DataFrame(new_metadata)
-    # Map Severity to Binary Target: B=0, M=1
+    # map Severity to binary target: B=0, M=1
     final_df['target'] = final_df['severity'].map({'B': 0, 'M': 1})
     
     csv_path = os.path.join(BASE_DIR, 'data', 'metadata_roi.csv')
