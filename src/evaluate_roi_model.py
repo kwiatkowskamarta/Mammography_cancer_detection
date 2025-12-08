@@ -55,11 +55,11 @@ def main():
         print("Model not found. Please train first.")
         return
 
-    # 1. Load Data
+    # load data
     df = pd.read_csv(CSV_PATH)
     df['target'] = df['target'].astype(str)
     
-    # Reconstruct the split (Must match training split logic!)
+    # reconstruct the split
     unique_ids = df['refnum'].unique()
     split_idx = int(len(unique_ids) * 0.8)
     test_ids = unique_ids[split_idx:]
@@ -67,7 +67,7 @@ def main():
     
     print(f"Evaluating on {len(test_df)} patches.")
 
-    # 2. Generator
+    #generator
     datagen = ImageDataGenerator(rescale=1./255)
     test_gen = datagen.flow_from_dataframe(
         dataframe=test_df,
@@ -80,17 +80,16 @@ def main():
         shuffle=False 
     )
 
-    # 3. Load Model and Predict
+    #load Model and predict
     model = load_model(MODEL_PATH)
     probs = model.predict(test_gen)
     preds = np.argmax(probs, axis=1)
     y_true = test_gen.classes
     
-    # Map classes
-    # Generator sorts alphanumerically: '0' (Benign), '1' (Malignant)
+    # map classes
     class_names = ['Benign', 'Malignant'] 
     
-    # 4. Reports
+    # reports
     report = classification_report(y_true, preds, target_names=class_names)
     print("\nClassification Report:\n")
     print(report)
