@@ -19,12 +19,12 @@ RESULTS_DIR = os.path.join(BASE_DIR, 'notebooks', 'evaluation_results')
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
-# Create results folder if not exists
+#create results folder if not exists
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 def plot_confusion_matrix(y_true, y_pred_classes, class_names):
     """
-    Generates and saves the Confusion Matrix.
+    generates and saves the Confusion Matrix.
     """
     cm = confusion_matrix(y_true, y_pred_classes)
     plt.figure(figsize=(10, 8))
@@ -41,7 +41,7 @@ def plot_confusion_matrix(y_true, y_pred_classes, class_names):
 
 def plot_roc_curves(y_true, y_pred_probs, class_names):
     """
-    Generates and saves ROC curves for each class.
+    generates and saves ROC curves for each class.
     """
     # Binarize the labels for multi-class ROC
     n_classes = len(class_names)
@@ -69,7 +69,7 @@ def plot_roc_curves(y_true, y_pred_probs, class_names):
 
 def visualize_predictions(generator, model, class_names, num_samples=9):
     """
-    Saves a grid of images with True vs Predicted labels.
+    saves a grid of images with True vs Predicted labels.
     """
     # Get a batch of images
     x_batch, y_batch = next(generator)
@@ -100,14 +100,14 @@ def visualize_predictions(generator, model, class_names, num_samples=9):
 def main():
     print("--- Loading Data & Model ---")
     
-    # 1. Load Metadata
+    # load Metadata
     df = pd.read_csv(CSV_PATH)
     test_df = df[df['dataset'] == 'test'].copy()
     test_df['target'] = test_df['target'].astype(str) # Keras requirement
     
     print(f"Evaluating on {len(test_df)} Test images.")
 
-    # 2. Setup Generator (Important: shuffle=False to match labels!)
+    # setup generator (shuffle=False to match labels)
     datagen = ImageDataGenerator(rescale=1./255)
     
     test_generator = datagen.flow_from_dataframe(
@@ -121,52 +121,49 @@ def main():
         shuffle=False 
     )
 
-    # 3. Load Model
+    #load Model
     if not os.path.exists(MODEL_PATH):
         print("Error: Model file not found. Run train_model.py first.")
         return
         
     model = load_model(MODEL_PATH)
     
-    # 4. Generate Predictions
+    # generate predictions
     print("Generating predictions...")
     # predict() returns probabilities for each class
     y_pred_probs = model.predict(test_generator)
     y_pred_classes = np.argmax(y_pred_probs, axis=1)
     
-    # Get True labels from the generator
+    #get True labels from the generator
     y_true = test_generator.classes
     
-    # Get Class Names (0, 1, 2) -> Map them if needed
-    # Based on our previous script: 0=N, 1=B, 2=M
-    # However, flow_from_dataframe sorts classes alphanumerically.
-    # Let's verify mapping from generator
+    # get Class Names (0, 1, 2) -> Map them if needed
+    # Based on our previous script: 0=N, 1=B, 2=M + veryfication
     class_indices = test_generator.class_indices
     # Invert dictionary to get {0: '0', 1: '1', 2: '2'}
     idx_to_class = {v: k for k, v in class_indices.items()}
     
-    # Map to human readable names
-    # Assuming target was saved as 0, 1, 2 in preprocessing
+    # map to readable names
     # 0 -> Normal, 1 -> Benign, 2 -> Malignant
     human_labels = {0: 'Normal', 1: 'Benign', 2: 'Malignant'}
     class_names = [human_labels[int(idx_to_class[i])] for i in range(len(class_indices))]
     
     print(f"Class Mapping: {class_indices} -> {class_names}")
 
-    # 5. Generate Reports
+    # generate reports
     print("\n--- Classification Report ---")
     report = classification_report(y_true, y_pred_classes, target_names=class_names)
     print(report)
     
-    # Save Report to text file
+    #save report to text file
     with open(os.path.join(RESULTS_DIR, 'classification_report.txt'), 'w') as f:
         f.write(report)
 
-    # 6. Generate Plots
+    # generate plots
     plot_confusion_matrix(y_true, y_pred_classes, class_names)
     plot_roc_curves(y_true, y_pred_probs, class_names)
     
-    # Visual predictions need a fresh batch
+    # visual predictions need a fresh batch
     test_generator.reset() # Reset to start
     visualize_predictions(test_generator, model, class_names)
 
