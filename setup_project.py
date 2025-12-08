@@ -6,7 +6,7 @@ def create_file(path, content):
     print(f"Created: {path}")
 
 def setup_structure():
-    # 1. Define Directory Structure
+    # define Directory Structure
     dirs = [
         'data/raw',
         'data/processed',
@@ -19,7 +19,7 @@ def setup_structure():
         os.makedirs(d, exist_ok=True)
         print(f"Directory created: {d}")
 
-    # 2. Create requirements.txt
+    # create requirements.txt
     requirements = """pandas
 numpy
 opencv-python
@@ -30,7 +30,7 @@ jupyter
 """
     create_file('requirements.txt', requirements)
 
-    # 3. Create .gitignore (Standard for Python)
+    # create .gitignore
     gitignore = """
 # Python
 __pycache__/
@@ -38,10 +38,10 @@ __pycache__/
 venv/
 .env
 
-# Jupyter
+# jupyter
 .ipynb_checkpoints
 
-# Data (Never push large data to git)
+# data
 data/
 models/
 *.pgm
@@ -49,7 +49,7 @@ models/
 """
     create_file('.gitignore', gitignore)
 
-    # 4. Create README.md
+    # create README.md
     readme = """# Mammography Tumor Detection (MIAS Dataset)
 
 ## Project Overview
@@ -67,8 +67,7 @@ It utilizes the MIAS dataset, performing preprocessing, augmentation, and classi
 """
     create_file('README.md', readme)
 
-    # 5. Create the Main Preprocessing Script (src/data_preprocessing.py)
-    # This contains the logic we discussed: cleaning info.txt, resizing, and augmentation.
+    # create the main preprocessing script (src/data_preprocessing.py)
     preprocessing_code = r'''import pandas as pd
 import numpy as np
 import cv2
@@ -84,9 +83,9 @@ FINAL_CSV_NAME = 'metadata_processed.csv'
 
 def parse_info_file(file_path):
     """
-    Parses the MIAS info.txt file which has variable column lengths.
-    Structure: REFNUM BG CLASS SEVERITY X Y RADIUS
-    Note: 'NORM' lines lack Severity, X, Y, Radius.
+    parses the MIAS info.txt file which has variable column lengths.
+    structure: REFNUM BG CLASS SEVERITY X Y RADIUS
+    note: 'NORM' lines lack Severity, X, Y, Radius.
     """
     print(f"Reading metadata from: {file_path}")
     
@@ -98,8 +97,7 @@ def parse_info_file(file_path):
         parts = line.strip().split()
         if len(parts) < 3:
             continue # Skip empty lines
-            
-        # Basic parsing
+        
         refnum = parts[0]
         bg_tissue = parts[1]
         cls = parts[2] # 'CIRC', 'SPIC', 'MISC', 'ARCH', 'ASYM', 'NORM'
@@ -108,9 +106,8 @@ def parse_info_file(file_path):
             severity = 'N' # Normal
             x, y, radius = 0, 0, 0
         else:
-            # Check if line is malformed or missing data
+            # check if line is malformed or missing data
             if len(parts) < 7:
-                # Sometimes specific lines might be broken in raw text, handle gracefully
                 continue 
             severity = parts[3]
             x = int(parts[4])
@@ -124,15 +121,15 @@ def parse_info_file(file_path):
 
 def clean_metadata(df):
     """
-    Cleans metadata: handles duplicates by keeping the most severe case per image.
-    Severity Map: M (Malignant) > B (Benign) > N (Normal)
+    cleans metadata: handles duplicates by keeping the most severe case per image.
+    severity Map: M (Malignant) > B (Benign) > N (Normal)
     """
-    # Map severity to a numeric score for sorting
+    # map severity to a numeric score for sorting
     severity_map = {'M': 2, 'B': 1, 'N': 0}
     df['severity_score'] = df['severity'].map(severity_map)
     
-    # Sort descending by severity and remove duplicates based on 'refnum'
-    # This keeps the most severe diagnosis if an image appears multiple times
+    # sort descending by severity and remove duplicates based on 'refnum'
+    #this keeps the most severe diagnosis if an image appears multiple times
     df_clean = df.sort_values('severity_score', ascending=False).drop_duplicates('refnum')
     
     df_clean = df_clean.drop(columns=['severity_score'])
@@ -141,8 +138,8 @@ def clean_metadata(df):
 
 def process_and_augment(df):
     """
-    Reads images, resizes them, and performs augmentation (flips).
-    Saves processed images as PNG.
+    reads images, resizes them, and performs augmentation (flips).
+    saves processed images as PNG.
     """
     if not os.path.exists(PROCESSED_PATH):
         os.makedirs(PROCESSED_PATH)
@@ -152,25 +149,24 @@ def process_and_augment(df):
     print("Starting image processing and augmentation...")
     for _, row in tqdm(df.iterrows(), total=df.shape[0]):
         img_id = row['refnum']
-        # MIAS images are typically .pgm
         img_path = os.path.join(RAW_DATA_PATH, f"{img_id}.pgm")
         
         if not os.path.exists(img_path):
-            # Try searching for file with spaces or different extension just in case
+            #try searching for file with spaces or different extension (just in case)
             continue
             
-        # Read Image
+        #read Image
         img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             continue
             
-        # Resize
+        # resize
         img_resized = cv2.resize(img, IMG_SIZE)
         
         # --- AUGMENTATION STRATEGY ---
-        # 1. Original
-        # 2. Horizontal Flip
-        # 3. Vertical Flip
+        # 1. original
+        # 2. horizontal Flip
+        # 3. vertical Flip
         
         transforms = {
             'orig': None,
@@ -184,18 +180,18 @@ def process_and_augment(df):
             else:
                 final_img = cv2.flip(img_resized, code)
                 
-            # Save
+            # save
             new_filename = f"{img_id}_{suffix}.png"
             save_path = os.path.join(PROCESSED_PATH, new_filename)
             cv2.imwrite(save_path, final_img)
             
-            # Update Metadata
+            # update metadata
             new_row = row.copy()
             new_row['filename'] = new_filename
             new_row['augmentation'] = suffix
             new_metadata.append(new_row)
             
-    # Save final CSV
+    #save final CSV
     final_df = pd.DataFrame(new_metadata)
     final_csv_path = os.path.join('data', FINAL_CSV_NAME)
     final_df.to_csv(final_csv_path, index=False)
@@ -215,9 +211,8 @@ if __name__ == "__main__":
     create_file('src/data_preprocessing.py', preprocessing_code)
 
     print("\n--- Project Setup Complete ---")
-    print("1. Please run: pip install -r requirements.txt")
-    print("2. Move your MIAS .pgm images and info.txt into 'data/raw/'")
-    print("3. Run the processor: python src/data_preprocessing.py")
+    print("Please run: pip install -r requirements.txt")
+    print("Run the processor: python src/data_preprocessing.py")
 
 if __name__ == "__main__":
     setup_structure()
