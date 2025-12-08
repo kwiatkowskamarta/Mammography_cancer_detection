@@ -15,13 +15,13 @@ RANDOM_SEED = 42
 
 def parse_info_file(file_path):
     """
-    Parses the MIAS info.txt file.
-    Handles 'NORM' cases by filling missing values with defaults.
+    parses the MIAS info.txt file.
+    handles 'NORM' cases by filling missing values with defaults.
     """
     print(f"Reading metadata from: {file_path}")
     data = []
     
-    # Read file line by line to handle variable length
+    #read file line by line to handle variable length
     with open(file_path, 'r') as f:
         lines = f.readlines()
         
@@ -48,30 +48,29 @@ def parse_info_file(file_path):
 
 def clean_and_split_data(df):
     """
-    1. Removes duplicates (keeps most severe diagnosis).
-    2. Encodes Target labels (0: Normal, 1: Benign, 2: Malignant).
-    3. Splits data into Train (80%) and Test (20%) ensuring NO PATIENT OVERLAP.
+    removes duplicates (keeps most severe diagnosis).
+    encodes target labels (0: Normal, 1: Benign, 2: Malignant).
+    splits data into Train (80%) and Test (20%) ensuring NO PATIENT OVERLAP.
     """
-    # 1. Handle Duplicates: Malignant > Benign > Normal
+    #handle duplicates: malignant > benign > normal
     severity_map = {'M': 2, 'B': 1, 'N': 0}
     df['severity_score'] = df['severity'].map(severity_map)
     df_clean = df.sort_values('severity_score', ascending=False).drop_duplicates('refnum').copy()
     
-    # 2. Add Target Column for Training
-    # We can treat this as a 3-class problem (N, B, M) or binary (Sick/Healthy) later.
+    # add target column for training
     df_clean['target'] = df_clean['severity_score']
     
-    # 3. Patient-Level Split
-    # We split based on unique REFNUMs to prevent data leakage.
+    # patient-level split
+    #splitting based on unique REFNUMs to prevent data leakage
     unique_patients = df_clean['refnum'].values
     train_ids, test_ids = train_test_split(
         unique_patients, 
         test_size=0.20, 
         random_state=RANDOM_SEED,
-        stratify=df_clean['severity'] # Ensures equal % of Cancer/Normal in both sets
+        stratify=df_clean['severity'] #ensures equal % of cancer/normal in both sets
     )
     
-    # Assign split label
+    # asign split label
     df_clean['dataset'] = 'train'
     df_clean.loc[df_clean['refnum'].isin(test_ids), 'dataset'] = 'test'
     
@@ -80,15 +79,15 @@ def clean_and_split_data(df):
 
 def apply_clahe(img):
     """
-    Applies Contrast Limited Adaptive Histogram Equalization.
-    Enhances local contrast to make tissue structures more visible.
+    applies Contrast Limited Adaptive Histogram Equalization.
+    enhances local contrast to make tissue structures more visible.
     """
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
     return clahe.apply(img)
 
 def process_and_augment(df):
     """
-    Pipeline: Load -> Resize -> CLAHE -> Augment -> Save
+    pipeline: load -> resize -> CLAHE ->augment -> save
     """
     if not os.path.exists(PROCESSED_PATH):
         os.makedirs(PROCESSED_PATH)
@@ -104,21 +103,19 @@ def process_and_augment(df):
         if not os.path.exists(img_path):
             continue
             
-        # Load Image
+        # load Image
         img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         
-        # 1. Resize (to reduce computation)
+        # 1. resize (to reduce computation)
         img_resized = cv2.resize(img, IMG_SIZE)
         
-        # 2. Apply CLAHE (Contrast Enhancement)
+        # 2. apply CLAHE (Contrast Enhancement)
         # Applying after resize is faster and usually sufficient
         img_enhanced = apply_clahe(img_resized)
         
-        # 3. Augmentation Strategy
-        # We only augment the TRAINING set to keep the Test set "pure" (like real world data).
-        # However, for a small dataset, sometimes people augment test data for robustness checks,
-        # but standard practice is: Train on Augmented, Test on Original.
-        
+        # 3. augmentation Strategy
+        # only augmenting the TRAINING set to keep the test set "pure" (like real world data).
+       
         if row['dataset'] == 'train':
             transforms = {'orig': None, 'hflip': 1, 'vflip': 0}
         else:
@@ -130,23 +127,23 @@ def process_and_augment(df):
             else:
                 final_img = cv2.flip(img_enhanced, code)
             
-            # Save File
+            # save file
             new_filename = f"{img_id}_{suffix}.png"
             save_path = os.path.join(PROCESSED_PATH, new_filename)
             cv2.imwrite(save_path, final_img)
             
-            # Record Metadata
+            # record metadata
             new_row = row.copy()
             new_row['filename'] = new_filename
             new_row['augmentation'] = suffix
             final_metadata.append(new_row)
 
-    # Save CSV
+    #save CSV
     final_df = pd.DataFrame(final_metadata)
     final_csv_path = os.path.join('data', FINAL_CSV_NAME)
     final_df.to_csv(final_csv_path, index=False)
     
-    print(f"Success! Processed data saved to {final_csv_path}")
+    print(f"done! Processed data saved to {final_csv_path}")
     print(f"Total images: {len(final_df)}")
     print(f"Class distribution:\n{final_df['severity'].value_counts()}")
 
