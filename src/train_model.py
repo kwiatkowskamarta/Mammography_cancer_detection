@@ -29,10 +29,9 @@ def load_data():
 
 def apply_class_weights_to_dataframe(df):
     """
-    Calculates class weights and assigns a specific 'sample_weight' 
-    to every row in the dataframe.
+    calculates class weights and assigns a specific 'sample_weight' to every row in the dataframe.
     """
-    # 1. Calculate weights for the classes (0, 1, 2)
+    # calculate weights for the classes (0, 1, 2)
     y_train = df['target'].astype(int).values
     class_weights = class_weight.compute_class_weight(
         class_weight='balanced',
@@ -42,8 +41,7 @@ def apply_class_weights_to_dataframe(df):
     weights_dict = dict(enumerate(class_weights))
     print(f"Computed Class Weights: {weights_dict}")
 
-    # 2. Map these weights to a new column in the dataframe
-    # Assuming target is string '0', '1', '2', we map to int first
+    # map these weights to a new column in the dataframe
     df['sample_weight'] = df['target'].astype(int).map(weights_dict)
     
     return df
@@ -91,22 +89,22 @@ def plot_history(history):
     print(f"Plot saved to: {plot_path}")
 
 def main():
-    # 1. Load Data
+    # load data
     df = load_data()
     
-    # 2. Split into Train/Test subsets based on the flag we created earlier
+    #split into train/test subsets based on the flag we created earlier
     train_df = df[df['dataset'] == 'train'].copy()
     test_df = df[df['dataset'] == 'test'].copy()
     
-    # 3. Apply Weights directly to the DataFrame (The Fix)
+    # apply weights directly to the DataFrame
     train_df = apply_class_weights_to_dataframe(train_df)
     
     print(f"Training on {len(train_df)} images, Validation on {len(test_df)} images.")
 
-    # 4. Generators
+    # generators
     datagen = ImageDataGenerator(rescale=1./255)
 
-    # Note: We add 'weight_col' here. The generator will now yield (x, y, sample_weight)
+    # adding 'weight_col' here - the generator now: x, y, sample_weight
     train_generator = datagen.flow_from_dataframe(
         dataframe=train_df,
         directory=DATA_PATH,
@@ -130,7 +128,7 @@ def main():
         shuffle=False
     )
 
-    # 5. Build and Train
+    #build and rtain
     model = build_model(num_classes=3)
     
     callbacks = [
@@ -139,7 +137,6 @@ def main():
     ]
 
     print("--- Starting Training ---")
-    # We REMOVED class_weight argument here because it's handled by the generator now
     history = model.fit(
         train_generator,
         validation_data=valid_generator,
